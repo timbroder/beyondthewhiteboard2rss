@@ -54,7 +54,7 @@ class Main(webapp2.RequestHandler):
                     <div><input type="text" name="btwbid"></textarea></div>
                     <div><input type="submit" value="Submit"></div>
                   </form>""" % img
-        html = "%s%s%s" % (self.head, body, self.footer)
+        html = "%s%s%s" % (self.header, body, self.footer)
 
         self.response.out.write(html)
 
