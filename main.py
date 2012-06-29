@@ -5,7 +5,7 @@ import PyRSS2Gen
 import datetime
 import cgi
 from google.appengine.ext import db
-
+import logging
 
 class WodEntry(db.Model):
     user_id = db.IntegerProperty()
@@ -36,56 +36,62 @@ class Main(webapp2.RequestHandler):
     header = """
                 <html>
                     <head>
-<script type="text/javascript">
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-17099661-2']);
-    _gaq.push(['_trackPageview']);
-
-    (function() {
-        var ga = document.createElement('script');
-        ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol
-            ? 'https://ssl' : 'http://www')
-            + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
+                        <script type="text/javascript">
+                            var _gaq = _gaq || [];
+                            _gaq.push(['_setAccount', 'UA-17099661-2']);
+                            _gaq.push(['_trackPageview']);
+                        
+                            (function() {
+                                var ga = document.createElement('script');
+                                ga.type = 'text/javascript'; ga.async = true;
+                                ga.src = ('https:' == document.location.protocol
+                                    ? 'https://ssl' : 'http://www')
+                                    + '.google-analytics.com/ga.js';
+                                var s = document.getElementsByTagName('script')[0];
+                                s.parentNode.insertBefore(ga, s);
+                          })();
+                        
+                        </script>
+                        <script src="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.0.2/bootstrap.min.js"></script>
+                        <link href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css" rel="stylesheet">
+                        <style>
+                          body {
+                            padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+                          }
+                        </style>
                     </head>
                     <body>
-                        <h1>Beyond The Whiteboard 2 RSS</h1>
+                        <div class="container">
+                            <h1>Beyond The Whiteboard 2 RSS</h1>
                     """
 
-    footer = """<p><i>This site is not affiliated with or endorsed by
-                beyondthewhiteboard.com</i></p></body>
-                </html>"""
+    footer = """
+                            <p><i>This site is not affiliated with or endorsed by
+                            beyondthewhiteboard.com</i></p></body>
+                        </div>
+                    </html>"""
 
     def get(self):
         img = "http://farm8.staticflickr.com/7035/6669670393_a789421208_o.png"
         body = """
-                  <p>Enter your beyondthewhiteboard id:</p>
+                  <h4>Get an RSS feed of the workouts you log.  More features coming soon</h4>
+                  <p>Enter your beyondthewhiteboard id (see screenshot on where to find it)</p>
+                  <form action="/" method="post"></p>
+                    <p><input type="text" name="btwbid" class="span3" style="height:30px"></p>
+                    <p><button type="submit" class="btn">Submit</button></p>
+                  </form>
                   <p><img
                       src="%s"
                       alt="finding your beyondthewhiteboard id" border="1"></p>
-                  <form action="/" method="post">
-                    <div><input type="text" name="btwbid"></textarea></div>
-                    <div><input type="submit" value="Submit"></div>
-                  </form>""" % img
+                    """ % img
         html = "%s%s%s" % (self.header, body, self.footer)
 
         self.response.out.write(html)
 
     def post(self):
-        html = """
-            <html>
-                <body>
-                    <p>Wod Rss: <a href="/wods/%s/">Click Here</a>
-                </body>
-            </html>
-            """
+        html = "%s<p>Wod Rss: <a href=\"/wods/%s/\">Click Here</a>%s"
 
-        self.response.out.write(html % cgi.escape(self.request.get('btwbid')))
+        self.response.out.write(html % (self.header, cgi.escape(self.request.get('btwbid')), self.footer))
 
 
 class Wods(webapp2.RequestHandler):
@@ -93,6 +99,8 @@ class Wods(webapp2.RequestHandler):
     timsite = "http://beyondthewhiteboard2rss.timbroder.com"
 
     def soup_url(self, url):
+        logging.info('!!!' + url + '!!!')
+
         response = urllib2.urlopen(url)
         html = response.read()
         soup = BeautifulSoup(html)
@@ -100,7 +108,10 @@ class Wods(webapp2.RequestHandler):
         return soup
 
     def workout_details(self, url):
-        workout = self.soup_url(url)
+        try:
+            workout = self.soup_url(url)
+        except urllib2.HTTPError:
+            return "Workout information is not public<br>Click <a href=\"%s\">here</a> to see.<br><br>" % url
         return workout.find(
                 'div', {'class': 'workout_description_container'})
 
